@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -10,7 +10,9 @@ import {
   Languages, 
   FileText,
   User,
-  PlusCircle
+  PlusCircle,
+  Menu,
+  X
 } from 'lucide-react';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -18,6 +20,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { language, setLanguage, t } = useLanguage();
   const location = useLocation();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -59,8 +62,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </div>
       )}
       <div className="flex-1 flex flex-col md:flex-row text-police-light police-watermark">
+        {/* Mobile menu backdrop */}
+        {mobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black/60 z-30 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="w-full md:w-64 bg-[#081225] border-r border-police-border/60 flex flex-col justify-between shrink-0">
+        <aside className={`w-64 bg-[#081225] border-r border-police-border/60 flex flex-col justify-between shrink-0 fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 md:relative md:translate-x-0 ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}>
         <div>
           {/* Brand header */}
           <div className="p-6 border-b border-police-border/60 flex items-center gap-3">
@@ -106,6 +119,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group ${
                     active 
                       ? 'bg-police-hover text-police-gold border-l-4 border-police-gold shadow-neon-navy' 
@@ -142,7 +156,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
           {/* Logout Button */}
           <button
-            onClick={handleLogout}
+            onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
             className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-police-hover/30 hover:bg-police-crimson/10 border border-police-border hover:border-police-crimson/30 text-police-slate hover:text-police-crimson rounded-md text-xs font-semibold transition-all duration-200"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -152,15 +166,25 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       </aside>
 
       {/* Main Content Pane */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#020c1b]/50">
+      <main className="flex-1 flex flex-col min-w-0 bg-[#020c1b]/50 md:pl-0">
         <header className="h-16 border-b border-police-border/60 bg-[#081225]/50 backdrop-blur-md flex items-center justify-between px-6 md:px-8">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-police-slate font-medium hidden md:inline">
-              CrimeGPT Portal &gt;
-            </span>
-            <span className="text-xs text-police-gold font-semibold uppercase tracking-wider">
-              {location.pathname === '/' ? 'SYSTEM DASHBOARD' : location.pathname.substring(1).replace(/\//g, ' > ').toUpperCase()}
-            </span>
+          <div className="flex items-center gap-3">
+            {/* Hamburger Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 -ml-2 text-police-slate hover:text-white md:hidden border border-police-border/30 rounded bg-police-card/30"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-police-slate font-medium hidden md:inline">
+                CrimeGPT Portal &gt;
+              </span>
+              <span className="text-xs text-police-gold font-semibold uppercase tracking-wider">
+                {location.pathname === '/' ? 'SYSTEM DASHBOARD' : location.pathname.substring(1).replace(/\//g, ' > ').toUpperCase()}
+              </span>
+            </div>
           </div>
           <div className="text-[11px] text-police-slate font-medium">
             {t('welcome')}, <span className="text-white font-semibold">{user?.name}</span>
