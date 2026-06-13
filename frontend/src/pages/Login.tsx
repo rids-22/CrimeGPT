@@ -137,18 +137,79 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#020c1b] via-[#040e22] to-[#020813] flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Background grid pattern that disappears towards the right */}
-      <div 
-        className="absolute inset-0 login-grid-pattern pointer-events-none z-0"
-        style={{
-          maskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 35%, rgba(0,0,0,0) 65%)',
-          WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 35%, rgba(0,0,0,0) 65%)'
-        }}
-      ></div>
+    <div className="min-h-screen bg-[#020c1b] flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      
+      {/* Cyber Security SVG Background (HUD & Constellation Network) */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="security-grid" width="45" height="45" patternUnits="userSpaceOnUse">
+            <path d="M 45 0 L 0 0 0 45" fill="none" stroke="rgba(16, 185, 129, 0.05)" strokeWidth="1" />
+            <path d="M 90 0 L 0 0 0 90" fill="none" stroke="rgba(6, 180, 212, 0.03)" strokeWidth="1.5" />
+          </pattern>
+          <radialGradient id="bg-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.15" />
+            <stop offset="60%" stopColor="#0891b2" stopOpacity="0.03" />
+            <stop offset="100%" stopColor="#020c1b" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        
+        {/* Deep background color */}
+        <rect width="100%" height="100%" fill="#020c1b" />
+        
+        {/* Glow center */}
+        <circle cx="50%" cy="50%" r="45%" fill="url(#bg-glow)" />
 
-      {/* Central glow spot */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse"></div>
+        {/* Tech Grid */}
+        <rect width="100%" height="100%" fill="url(#security-grid)" />
+
+        {/* Constellation lines */}
+        <g stroke="rgba(6, 180, 212, 0.15)" strokeWidth="0.75">
+          <line x1="8%" y1="12%" x2="22%" y2="8%" />
+          <line x1="22%" y1="8%" x2="32%" y2="24%" />
+          <line x1="8%" y1="12%" x2="18%" y2="32%" />
+          <line x1="18%" y1="32%" x2="32%" y2="24%" />
+          
+          <line x1="72%" y1="10%" x2="82%" y2="22%" />
+          <line x1="82%" y1="22%" x2="65%" y2="28%" />
+          <line x1="65%" y1="28%" x2="72%" y2="10%" />
+
+          <line x1="12%" y1="72%" x2="28%" y2="82%" />
+          <line x1="28%" y1="82%" x2="22%" y2="58%" />
+          <line x1="22%" y1="58%" x2="12%" y2="72%" />
+
+          <line x1="78%" y1="68%" x2="88%" y2="82%" />
+          <line x1="68%" y1="78%" x2="78%" y2="68%" />
+          <line x1="68%" y1="78%" x2="88%" y2="82%" />
+        </g>
+
+        {/* Constellation dots */}
+        <g>
+          <circle cx="8%" cy="12%" r="3" fill="#06b6d4" className="animate-pulse" />
+          <circle cx="22%" cy="8%" r="1.5" fill="#10b981" />
+          <circle cx="32%" cy="24%" r="3.5" fill="#06b6d4" />
+          <circle cx="18%" cy="32%" r="2.5" fill="#10b981" />
+          
+          <circle cx="72%" cy="10%" r="2" fill="#10b981" />
+          <circle cx="82%" cy="22%" r="4" fill="#06b6d4" className="animate-pulse" />
+          <circle cx="65%" cy="28%" r="2.5" fill="#10b981" />
+
+          <circle cx="12%" cy="72%" r="3.5" fill="#06b6d4" />
+          <circle cx="28%" cy="82%" r="2.5" fill="#10b981" />
+          <circle cx="22%" cy="58%" r="2" fill="#06b6d4" className="animate-pulse" />
+
+          <circle cx="78%" cy="68%" r="3" fill="#10b981" />
+          <circle cx="88%" cy="82%" r="3.5" fill="#06b6d4" />
+          <circle cx="68%" cy="78%" r="2" fill="#06b6d4" />
+        </g>
+
+        {/* Rotating Circular HUD motifs */}
+        <g stroke="rgba(6, 182, 212, 0.12)" fill="none" strokeWidth="1">
+          <circle cx="50%" cy="50%" r="320" strokeDasharray="8,24" className="animate-[spin_90s_linear_infinite]" />
+          <circle cx="50%" cy="50%" r="280" strokeDasharray="60,30" className="animate-[spin_60s_linear_infinite_reverse]" />
+          <circle cx="50%" cy="50%" r="240" strokeWidth="0.5" />
+          <circle cx="50%" cy="50%" r="200" strokeDasharray="4,8" className="animate-[spin_40s_linear_infinite]" />
+        </g>
+      </svg>
 
       {/* Login Card */}
       <div className="w-full max-w-lg p-8 sm:p-10 rounded-2xl border border-slate-800/80 bg-[#0b1329]/95 shadow-[0_20px_50px_rgba(0,0,0,0.65)] relative z-10 animate-fadeIn">
