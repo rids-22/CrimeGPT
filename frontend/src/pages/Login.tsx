@@ -137,10 +137,10 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020813] flex items-center justify-center p-4 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-[#020c1b] via-[#040e22] to-[#020813] flex items-center justify-center p-4 relative overflow-hidden font-sans">
       {/* Background grid pattern that disappears towards the right */}
       <div 
-        className="absolute inset-0 bg-[linear-gradient(to_right,rgba(99,102,241,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(99,102,241,0.08)_1px,transparent_1px)] bg-[size:56px_56px] pointer-events-none z-0"
+        className="absolute inset-0 login-grid-pattern pointer-events-none z-0"
         style={{
           maskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 35%, rgba(0,0,0,0) 65%)',
           WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 35%, rgba(0,0,0,0) 65%)'
