@@ -397,6 +397,67 @@ export const Login: React.FC = () => {
                 : 'Secure Authenticate'
             }
           </button>
+
+          {/* Quick Roles Access (Hackathon/Grading only) */}
+          <div className="border-t border-slate-800/80 pt-5 mt-5">
+            <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-wider mb-3.5">
+              Quick Roles Access (Demo)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('io_sharma');
+                  setPassword('password123');
+                  setRole('IO');
+                  setRoleCredential('IO-10293');
+                  setAgreed(true);
+                }}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 text-[10px] font-extrabold uppercase tracking-wide text-indigo-400 hover:text-white transition-all duration-200"
+              >
+                <span>IO Sharma</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('sho_singh');
+                  setPassword('password123');
+                  setRole('SHO');
+                  setRoleCredential('PS-4001');
+                  setAgreed(true);
+                }}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-[10px] font-extrabold uppercase tracking-wide text-amber-400 hover:text-white transition-all duration-200"
+              >
+                <span>SHO Singh</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('legal_verma');
+                  setPassword('password123');
+                  setRole('LEGAL_ADVISOR');
+                  setRoleCredential('BC-1234/56');
+                  setAgreed(true);
+                }}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 text-[10px] font-extrabold uppercase tracking-wide text-sky-400 hover:text-white transition-all duration-200"
+              >
+                <span>Legal Verma</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUsername('admin_crimegpt');
+                  setPassword('password123');
+                  setRole('ADMIN');
+                  setRoleCredential('ADM-99182');
+                  setAgreed(true);
+                }}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-[10px] font-extrabold uppercase tracking-wide text-rose-400 hover:text-white transition-all duration-200"
+              >
+                <span>Admin Portal</span>
+              </button>
+            </div>
+          </div>
         </form>
 
       </div>
