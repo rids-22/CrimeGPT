@@ -1,0 +1,32 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Compiled files
+dist/
+build/
+*.js.map
+*.tsbuildinfo
+
+# Environmental configurations
+.env
+.env.local
+.env.production
+.env.development
+
+# SQLite database files
+*.sqlite
+*.sqlite-journal
+*.db
+*.db-journal
+
+# Local developments / OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-police-dark text-police-light font-sans min-h-screen selection:bg-police-gold selection:text-police-dark;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020c1b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1d2d50;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #233554;
+}
+
+/* Glassmorphism Styles */
+.glass-panel {
+  background: rgba(17, 34, 64, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(29, 45, 80, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+.glass-card {
+  background: rgba(17, 34, 64, 0.5);
+  border: 1px solid rgba(29, 45, 80, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Custom Inputs */
+.input-field {
+  background: #070f1e;
+  border: 1px solid #1d2d50;
+  color: #e2e8f0;
+  @apply rounded-md px-4 py-2.5 outline-none transition-all duration-200 focus:border-police-gold focus:ring-1 focus:ring-police-gold/30 text-sm;
+}
+
+.input-field.pl-10 {
+  padding-left: 2.5rem !important;
+}
+
+.input-field::placeholder {
+  color: #8892b0 !important;
+  opacity: 0.5 !important;
+  transition: opacity 0.2s ease;
+}
+
+.input-field:focus::placeholder {
+  opacity: 0 !important;
+  color: transparent !important;
+}
+
+.select-field {
+  background: #070f1e;
+  border: 1px solid #1d2d50;
+  color: #e2e8f0;
+  @apply rounded-md px-4 py-2.5 outline-none transition-all duration-200 focus:border-police-gold text-sm cursor-pointer;
+}
+
+/* Buttons */
+.btn-primary {
+  @apply bg-gradient-to-r from-police-gold to-amber-600 hover:from-amber-500 hover:to-police-gold text-police-dark font-semibold px-5 py-2.5 rounded-md shadow-md hover:shadow-neon-gold hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-sm inline-flex items-center justify-center gap-2;
+}
+
+.btn-secondary {
+  @apply bg-police-hover/80 hover:bg-police-hover text-police-light border border-police-border/80 font-medium px-5 py-2.5 rounded-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-sm inline-flex items-center justify-center gap-2;
+}
+
+.btn-danger {
+  @apply bg-police-crimson/90 hover:bg-police-crimson text-white font-medium px-5 py-2.5 rounded-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-sm inline-flex items-center justify-center gap-2;
+}
+
+/* Badges */
+.badge-active {
+  @apply bg-emerald-500/10 text-police-success border border-police-success/20 px-2.5 py-1 text-xs font-semibold rounded-full uppercase tracking-wider;
+}
+
+.badge-arrested {
+  @apply bg-police-gold/10 text-police-gold border border-police-gold/20 px-2.5 py-1 text-xs font-semibold rounded-full uppercase tracking-wider;
+}
+
+.badge-closed {
+  @apply bg-police-slate/10 text-police-slate border border-police-slate/20 px-2.5 py-1 text-xs font-semibold rounded-full uppercase tracking-wider;
+}
+
+/* Micro Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+/* Police Badge Watermark */
+.police-watermark {
+  background-image: radial-gradient(rgba(35, 53, 84, 0.05) 1px, transparent 0);
+  background-size: 24px 24px;
+}
