@@ -160,5 +160,5 @@ To simplify grading and evaluation, the login page features a **Quick Roles Acce
 4. **Timeline Entry**: Go to the **Investigation Diary** tab inside Case Details, select "STATEMENT_RECORDED" and log a witness statement. Notice it updates the timeline instantly.
 5. **Add Evidence**: Go to the **Evidence Collection** tab and record a mock weapon (e.g. CCTV tape). It will log it to the diary timeline.
 6. **Arrest Booking**: Click **Book Arrest** at the top banner to arrest the accused. This logs "ARREST_MADE" in the case diary.
-7. **Document generation**: Go to the **Auto Documents** tab. Select **Remand Request**, choose language as **Hindi (हिन्दी)** or **Gujarati (ગુજરાતી)**. Click **Export PDF** or **Word (DOCX)**. Inspect the formatted file.
+7. **Document generation**: Go to the **Auto Documents** tab. Select **Remand Request**, choose language as **Hindi (हिन्दी)** or **Gujarati (ગુજરાતી)** or Marathi. Click **Export PDF** or **Word (DOCX)**. Inspect the formatted file.
 8. **Compliance Audit**: Log out, click **System Administrator** quick login, and visit the **Audit Logs** tab in the sidebar. Inspect all logged actions, Operator names, and JSON parameters.
