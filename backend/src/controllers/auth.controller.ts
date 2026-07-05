@@ -7,6 +7,20 @@ import { logAction } from '../services/audit.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'crimegpt_secret_key_2026';
 
+// Enforces a minimum password strength on registration: at least 8 characters,
+// one uppercase, one lowercase, one digit, and one special character.
+// Mirrors the client-side check in Login.tsx, but this is the copy that actually
+// matters since the frontend check alone can be bypassed by calling the API directly.
+const isStrongPassword = (pw: string): boolean => {
+  return (
+    pw.length >= 8 &&
+    /[A-Z]/.test(pw) &&
+    /[a-z]/.test(pw) &&
+    /\d/.test(pw) &&
+    /[^A-Za-z0-9]/.test(pw)
+  );
+};
+
 const validateRoleCredential = (role: string, credential?: string): { valid: boolean; error?: string } => {
   if (!credential) {
     return { valid: false, error: 'Role security credential is required' };
@@ -89,6 +103,12 @@ export async function register(req: Request, res: Response) {
 
     if (!username || !password || !name || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({
+        error: 'Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a special character.'
+      });
     }
 
     // Validate role security credential format

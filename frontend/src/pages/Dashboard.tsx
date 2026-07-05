@@ -40,6 +40,15 @@ interface Stats {
     action: string;
     timestamp: string;
   }>;
+  crimeTypeDistribution: Array<{
+    label: string;
+    count: number;
+    percent: number;
+  }>;
+  monthlyTrend: Array<{
+    label: string;
+    count: number;
+  }>;
 }
 
 export const Dashboard: React.FC = () => {
@@ -211,6 +220,50 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // ---- Donut chart: crime type distribution, computed from real case data ----
+  const DONUT_COLORS = ['#6366f1', '#06b6d4', '#f59e0b', '#94a3b8'];
+  const DONUT_RADIUS = 50;
+  const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
+  const crimeDistribution = stats?.crimeTypeDistribution || [];
+  let cumulativePercent = 0;
+  const donutSlices = crimeDistribution.map((entry, idx) => {
+    const sliceLength = (entry.percent / 100) * DONUT_CIRCUMFERENCE;
+    const offset = -(cumulativePercent / 100) * DONUT_CIRCUMFERENCE;
+    cumulativePercent += entry.percent;
+    return {
+      ...entry,
+      color: DONUT_COLORS[idx % DONUT_COLORS.length],
+      dasharray: `${sliceLength} ${DONUT_CIRCUMFERENCE - sliceLength}`,
+      dashoffset: offset
+    };
+  });
+
+  // ---- Line chart: monthly case registration trend, computed from real case data ----
+  const monthlyTrend = stats?.monthlyTrend || [];
+  const trendCounts = monthlyTrend.map(m => m.count);
+  const trendMax = Math.max(5, ...trendCounts);
+  // Round the axis ceiling up to a clean multiple of 5 so grid labels stay whole numbers.
+  const yAxisMax = Math.ceil(trendMax / 5) * 5;
+  const CHART_LEFT = 50;
+  const CHART_RIGHT = 560;
+  const CHART_TOP = 20;
+  const CHART_BOTTOM = 180;
+  const trendPoints = monthlyTrend.map((m, idx) => {
+    const x = monthlyTrend.length > 1
+      ? CHART_LEFT + (idx / (monthlyTrend.length - 1)) * (CHART_RIGHT - CHART_LEFT)
+      : (CHART_LEFT + CHART_RIGHT) / 2;
+    const y = CHART_BOTTOM - (m.count / yAxisMax) * (CHART_BOTTOM - CHART_TOP);
+    return { x, y, label: m.label, count: m.count };
+  });
+  const trendLinePath = trendPoints.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const trendAreaPath = trendPoints.length
+    ? `M ${trendPoints[0].x} ${CHART_BOTTOM} L ${trendLinePath.slice(2)} L ${trendPoints[trendPoints.length - 1].x} ${CHART_BOTTOM} Z`
+    : '';
+  const yAxisTicks = [0, 1, 2, 3, 4, 5].map(i => ({
+    y: CHART_BOTTOM - (i / 5) * (CHART_BOTTOM - CHART_TOP),
+    value: Math.round((i / 5) * yAxisMax)
+  }));
+
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Welcome Hero Banner */}
@@ -314,52 +367,50 @@ export const Dashboard: React.FC = () => {
           <div className="my-auto py-2 w-full h-[220px]">
             <svg viewBox="0 0 600 240" className="w-full h-full text-indigo-400">
               {/* Grid Lines */}
-              <line x1="50" y1="20" x2="560" y2="20" stroke="#1d2d50" strokeWidth="1" strokeDasharray="3,3" />
-              <line x1="50" y1="52" x2="560" y2="52" stroke="#1d2d50" strokeWidth="1" strokeDasharray="3,3" />
-              <line x1="50" y1="84" x2="560" y2="84" stroke="#1d2d50" strokeWidth="1" strokeDasharray="3,3" />
-              <line x1="50" y1="116" x2="560" y2="116" stroke="#1d2d50" strokeWidth="1" strokeDasharray="3,3" />
-              <line x1="50" y1="148" x2="560" y2="148" stroke="#1d2d50" strokeWidth="1" strokeDasharray="3,3" />
-              <line x1="50" y1="180" x2="560" y2="180" stroke="#1d2d50" strokeWidth="1" />
+              {yAxisTicks.map((tick, idx) => (
+                <line
+                  key={idx}
+                  x1="50" y1={tick.y} x2="560" y2={tick.y}
+                  stroke="#1d2d50"
+                  strokeWidth="1"
+                  strokeDasharray={idx === 0 ? undefined : "3,3"}
+                />
+              ))}
 
               {/* Y-Axis Labels */}
-              <text x="25" y="24" className="fill-police-slate text-[10px] font-mono font-semibold" textAnchor="end">20</text>
-              <text x="25" y="56" className="fill-police-slate text-[10px] font-mono font-semibold" textAnchor="end">16</text>
-              <text x="25" y="88" className="fill-police-slate text-[10px] font-mono font-semibold" textAnchor="end">12</text>
-              <text x="25" y="120" className="fill-police-slate text-[10px] font-mono font-semibold" textAnchor="end">8</text>
-              <text x="25" y="152" className="fill-police-slate text-[10px] font-mono font-semibold" textAnchor="end">4</text>
-              <text x="25" y="184" className="fill-police-slate text-[10px] font-mono font-semibold" textAnchor="end">0</text>
+              {yAxisTicks.map((tick, idx) => (
+                <text key={idx} x="25" y={tick.y + 4} className="fill-police-slate text-[10px] font-mono font-semibold" textAnchor="end">
+                  {tick.value}
+                </text>
+              ))}
 
               {/* X-Axis Labels */}
-              <text x="50" y="212" className="fill-police-slate text-[10px] font-mono font-bold" textAnchor="middle">Jan</text>
-              <text x="152" y="212" className="fill-police-slate text-[10px] font-mono font-bold" textAnchor="middle">Feb</text>
-              <text x="254" y="212" className="fill-police-slate text-[10px] font-mono font-bold" textAnchor="middle">Mar</text>
-              <text x="356" y="212" className="fill-police-slate text-[10px] font-mono font-bold" textAnchor="middle">Apr</text>
-              <text x="458" y="212" className="fill-police-slate text-[10px] font-mono font-bold" textAnchor="middle">May</text>
-              <text x="560" y="212" className="fill-police-slate text-[10px] font-mono font-bold" textAnchor="middle">Jun</text>
+              {trendPoints.map((p, idx) => (
+                <text key={idx} x={p.x} y="212" className="fill-police-slate text-[10px] font-mono font-bold" textAnchor="middle">
+                  {p.label}
+                </text>
+              ))}
 
-              {/* Area fill under curve */}
-              <path
-                d="M 50 180 L 50 84 C 95 40, 110 28, 152 28 C 200 28, 220 156, 254 156 C 290 156, 310 140, 356 140 C 400 140, 420 164, 458 164 L 560 164 L 560 180 Z"
-                fill="url(#gradient-area)"
-                opacity="0.15"
-              />
+              {trendPoints.length > 0 && (
+                <>
+                  {/* Area fill under curve */}
+                  <path d={trendAreaPath} fill="url(#gradient-area)" opacity="0.15" />
 
-              {/* Glowing stroke curve */}
-              <path
-                d="M 50 84 C 95 40, 110 28, 152 28 C 200 28, 220 156, 254 156 C 290 156, 310 140, 356 140 C 400 140, 420 164, 458 164 L 560 164"
-                fill="none"
-                stroke="#6366f1"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-              />
+                  {/* Glowing stroke line */}
+                  <path d={trendLinePath} fill="none" stroke="#6366f1" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
 
-              {/* Data points */}
-              <circle cx="50" cy="84" r="5" className="fill-[#6366f1] stroke-[#030a16] stroke-2 cursor-pointer hover:r-7 transition-all duration-150" />
-              <circle cx="152" cy="28" r="5" className="fill-[#6366f1] stroke-[#030a16] stroke-2 cursor-pointer hover:r-7 transition-all duration-150" />
-              <circle cx="254" cy="156" r="5" className="fill-[#6366f1] stroke-[#030a16] stroke-2 cursor-pointer hover:r-7 transition-all duration-150" />
-              <circle cx="356" cy="140" r="5" className="fill-[#6366f1] stroke-[#030a16] stroke-2 cursor-pointer hover:r-7 transition-all duration-150" />
-              <circle cx="458" cy="164" r="5" className="fill-[#6366f1] stroke-[#030a16] stroke-2 cursor-pointer hover:r-7 transition-all duration-150" />
-              <circle cx="560" cy="164" r="5" className="fill-[#6366f1] stroke-[#030a16] stroke-2 cursor-pointer hover:r-7 transition-all duration-150" />
+                  {/* Data points */}
+                  {trendPoints.map((p, idx) => (
+                    <circle
+                      key={idx}
+                      cx={p.x} cy={p.y} r="5"
+                      className="fill-[#6366f1] stroke-[#030a16] stroke-2 cursor-pointer hover:r-7 transition-all duration-150"
+                    >
+                      <title>{`${p.label}: ${p.count} case${p.count === 1 ? '' : 's'}`}</title>
+                    </circle>
+                  ))}
+                </>
+              )}
 
               {/* Gradients */}
               <defs>
@@ -381,28 +432,25 @@ export const Dashboard: React.FC = () => {
           </div>
           <div className="my-auto py-2">
             <svg viewBox="0 0 200 200" className="w-40 h-40 mx-auto transform -rotate-90">
-              {/* Violet slice (50%) */}
-              <circle
-                cx="100"
-                cy="100"
-                r="50"
-                fill="transparent"
-                stroke="#6366f1"
-                strokeWidth="24"
-                strokeDasharray="157.08 157.08"
-                strokeDashoffset="0"
-              />
-              {/* Cyan slice (50%) */}
-              <circle
-                cx="100"
-                cy="100"
-                r="50"
-                fill="transparent"
-                stroke="#06b6d4"
-                strokeWidth="24"
-                strokeDasharray="157.08 157.08"
-                strokeDashoffset="157.08"
-              />
+              {donutSlices.length > 0 ? (
+                donutSlices.map((slice, idx) => (
+                  <circle
+                    key={idx}
+                    cx="100"
+                    cy="100"
+                    r={DONUT_RADIUS}
+                    fill="transparent"
+                    stroke={slice.color}
+                    strokeWidth="24"
+                    strokeDasharray={slice.dasharray}
+                    strokeDashoffset={slice.dashoffset}
+                  >
+                    <title>{`${slice.label}: ${slice.count} case${slice.count === 1 ? '' : 's'} (${slice.percent}%)`}</title>
+                  </circle>
+                ))
+              ) : (
+                <circle cx="100" cy="100" r={DONUT_RADIUS} fill="transparent" stroke="#334155" strokeWidth="24" />
+              )}
               {/* Inner Core hole overlay */}
               <circle
                 cx="100"
@@ -414,18 +462,16 @@ export const Dashboard: React.FC = () => {
           </div>
           {/* Legend */}
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-[10px] font-bold text-police-slate pt-3 border-t border-police-border/40">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 bg-[#6366f1] rounded-sm"></span>
-              <span>Theft / Snatching</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 bg-[#06b6d4] rounded-sm"></span>
-              <span>Burglary</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 bg-[#f59e0b] rounded-sm"></span>
-              <span>Other Crimes</span>
-            </div>
+            {donutSlices.length > 0 ? (
+              donutSlices.map((slice, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: slice.color }}></span>
+                  <span>{slice.label} ({slice.percent}%)</span>
+                </div>
+              ))
+            ) : (
+              <span>No cases registered yet</span>
+            )}
           </div>
         </div>
 

@@ -31,6 +31,16 @@ export async function createCase(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: 'Missing mandatory case details' });
     }
 
+    // Validate phone numbers if provided (optional fields, but must be well-formed if present).
+    // Accepts a 10-digit Indian mobile number, optionally prefixed with +91 or 0.
+    const phonePattern = /^(?:\+91[-\s]?|0)?[6-9]\d{9}$/;
+    if (victim_contact && !phonePattern.test(victim_contact)) {
+      return res.status(400).json({ error: 'Victim contact number is invalid. Provide a valid 10-digit mobile number.' });
+    }
+    if (witness_contact && !phonePattern.test(witness_contact)) {
+      return res.status(400).json({ error: 'Witness contact number is invalid. Provide a valid 10-digit mobile number.' });
+    }
+
     // Check if case_number or fir_number already exists
     const duplicate = await queryOne(
       'SELECT id FROM cases WHERE case_number = $1 OR fir_number = $2',
@@ -353,13 +363,58 @@ export async function getDashboardStats(req: AuthRequest, res: Response) {
       LIMIT 8
     `);
 
+    // Crime type distribution: group by crime_type across all cases.
+    // GROUP BY works identically in both PostgreSQL and SQLite, so this stays dialect-safe.
+    const crimeTypeResult = await query(`
+      SELECT crime_type, COUNT(*) as count 
+      FROM cases 
+      GROUP BY crime_type 
+      ORDER BY count DESC
+    `);
+    const totalCases = parseInt(totalResult.rows[0]?.count || '0');
+    const topCrimeTypes = crimeTypeResult.rows.slice(0, 3);
+    const otherCount = crimeTypeResult.rows.slice(3).reduce((sum, row) => sum + parseInt(row.count), 0);
+    const crimeTypeDistribution = [
+      ...topCrimeTypes.map((row: any) => ({
+        label: row.crime_type,
+        count: parseInt(row.count),
+        percent: totalCases ? Math.round((parseInt(row.count) / totalCases) * 100) : 0
+      })),
+      ...(otherCount > 0 ? [{
+        label: 'Other Crimes',
+        count: otherCount,
+        percent: totalCases ? Math.round((otherCount / totalCases) * 100) : 0
+      }] : [])
+    ];
+
+    // Monthly case registration trend (last 6 months, including the current one).
+    // Aggregated in JS rather than SQL date functions, since SQLite and PostgreSQL
+    // use different date syntax and this keeps the query itself portable.
+    const allCases = await query('SELECT created_at FROM cases');
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const monthBuckets: { key: string; label: string; count: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthBuckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: monthLabels[d.getMonth()], count: 0 });
+    }
+    for (const row of allCases.rows) {
+      const created = new Date(row.created_at);
+      const key = `${created.getFullYear()}-${created.getMonth()}`;
+      const bucket = monthBuckets.find(b => b.key === key);
+      if (bucket) bucket.count++;
+    }
+    const monthlyTrend = monthBuckets.map(b => ({ label: b.label, count: b.count }));
+
     return res.status(200).json({
-      total: parseInt(totalResult.rows[0]?.count || '0'),
+      total: totalCases,
       active: parseInt(activeResult.rows[0]?.count || '0'),
       arrested: parseInt(arrestedResult.rows[0]?.count || '0'),
       documents: parseInt(docsResult.rows[0]?.count || '0'),
       recentActivities: recentActivities.rows,
-      auditLogs: recentLogs.rows
+      auditLogs: recentLogs.rows,
+      crimeTypeDistribution,
+      monthlyTrend
     });
   } catch (err: any) {
     console.error('Get stats error:', err);

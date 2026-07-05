@@ -146,8 +146,18 @@ export const NewCase: React.FC = () => {
   };
 
   const handleRegisterSubmit = async () => {
-    setLoading(true);
     setError('');
+
+    if (!isValidIndianPhone(victimContact)) {
+      setError('Victim contact number is invalid. Enter a valid 10-digit mobile number.');
+      return;
+    }
+    if (!isValidIndianPhone(witnessContact)) {
+      setError('Witness contact number is invalid. Enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    setLoading(true);
 
     const payload = {
       case_number: caseNumber,
@@ -394,12 +404,17 @@ export const NewCase: React.FC = () => {
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-police-slate font-bold uppercase tracking-wider">{t('victimContact')}</label>
                 <input
-                  type="text"
-                  placeholder="Phone Number"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="e.g. 9876543210"
                   value={victimContact}
-                  onChange={(e) => setOriginalVal(e.target.value, setVictimContact)}
+                  onChange={(e) => handlePhoneInput(e.target.value, setVictimContact)}
+                  maxLength={13}
                   className="input-field"
                 />
+                {victimContact && !isValidIndianPhone(victimContact) && (
+                  <p className="text-[10px] text-red-400 font-semibold">Enter a valid 10-digit mobile number (optionally prefixed with +91 or 0).</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1.5 md:col-span-2">
@@ -498,12 +513,17 @@ export const NewCase: React.FC = () => {
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-police-slate font-bold uppercase tracking-wider">{t('witnessContact')}</label>
                 <input
-                  type="text"
-                  placeholder="Witness Contact Phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="e.g. 9876543210"
                   value={witnessContact}
-                  onChange={(e) => setOriginalVal(e.target.value, setWitnessContact)}
+                  onChange={(e) => handlePhoneInput(e.target.value, setWitnessContact)}
+                  maxLength={13}
                   className="input-field"
                 />
+                {witnessContact && !isValidIndianPhone(witnessContact) && (
+                  <p className="text-[10px] text-red-400 font-semibold">Enter a valid 10-digit mobile number (optionally prefixed with +91 or 0).</p>
+                )}
               </div>
             </div>
           </div>
@@ -628,7 +648,18 @@ export const NewCase: React.FC = () => {
   );
 };
 
-// Simple helper function to set states
-function setOriginalVal(val: string, setter: (s: string) => void) {
-  setter(val);
+// Restricts phone input to digits (and an optional leading +), capped at a sane length.
+// This runs on every keystroke so users physically cannot type letters/symbols into a phone field.
+function handlePhoneInput(val: string, setter: (s: string) => void) {
+  let cleaned = val.replace(/[^\d+]/g, ''); // strip everything except digits and '+'
+  cleaned = cleaned.replace(/(?!^)\+/g, ''); // only allow a leading '+', strip any others
+  if (cleaned.length > 13) cleaned = cleaned.slice(0, 13); // '+91' + 10 digits max
+  setter(cleaned);
+}
+
+// Validates Indian mobile numbers: optional +91/0 prefix, then 10 digits starting 6-9.
+// Empty string is allowed since victim/witness contact are optional fields.
+function isValidIndianPhone(phone: string): boolean {
+  if (!phone) return true;
+  return /^(?:\+91[-\s]?|0)?[6-9]\d{9}$/.test(phone);
 }

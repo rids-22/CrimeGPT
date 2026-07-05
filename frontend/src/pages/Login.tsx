@@ -3,6 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Shield, Lock, User, AlertOctagon, UserPlus, Info, Home } from 'lucide-react';
 
+// Enforces a minimum password strength for new account registration:
+// at least 8 characters, one uppercase, one lowercase, one digit, one special character.
+function getPasswordChecks(pw: string) {
+  return {
+    length: pw.length >= 8,
+    upper: /[A-Z]/.test(pw),
+    lower: /[a-z]/.test(pw),
+    digit: /\d/.test(pw),
+    special: /[^A-Za-z0-9]/.test(pw)
+  };
+}
+
+function isStrongPassword(pw: string): boolean {
+  const checks = getPasswordChecks(pw);
+  return Object.values(checks).every(Boolean);
+}
+
 export const Login: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState('');
@@ -96,6 +113,10 @@ export const Login: React.FC = () => {
     e.preventDefault();
     if (!agreed) {
       setError('You must acknowledge and consent to the system tracking warning.');
+      return;
+    }
+    if (!isStrongPassword(password)) {
+      setError('Password does not meet the minimum security requirements shown below.');
       return;
     }
     setError('');
@@ -312,6 +333,26 @@ export const Login: React.FC = () => {
               className="input-field w-full py-3 bg-[#050b14] border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 text-white rounded-lg px-4 text-sm outline-none transition-all duration-200"
               required
             />
+            {isSignUp && (() => {
+              const checks = getPasswordChecks(password);
+              const rules: Array<[keyof typeof checks, string]> = [
+                ['length', 'At least 8 characters'],
+                ['upper', 'One uppercase letter'],
+                ['lower', 'One lowercase letter'],
+                ['digit', 'One number'],
+                ['special', 'One special character']
+              ];
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 mt-1.5 px-0.5">
+                  {rules.map(([key, label]) => (
+                    <div key={key} className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide ${checks[key] ? 'text-emerald-400' : 'text-slate-500'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${checks[key] ? 'bg-emerald-400' : 'bg-slate-600'}`}></span>
+                      <span>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           {/* Duty Role Assignment */}
@@ -387,7 +428,7 @@ export const Login: React.FC = () => {
           {/* Action Button */}
           <button
             type="submit"
-            disabled={loading || !agreed}
+            disabled={loading || !agreed || (isSignUp && !isStrongPassword(password))}
             className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 text-white font-bold text-sm rounded-lg shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.4)] transition-all duration-200 uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed text-center block active:scale-95"
           >
             {loading 

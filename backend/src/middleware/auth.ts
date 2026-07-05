@@ -42,7 +42,7 @@ export function requireRoles(roles: Array<'IO' | 'SHO' | 'LEGAL_ADVISOR' | 'ADMI
     }
 
     if (!roles.includes(user.role)) {
-      return res.status(430).json({ error: `Forbidden: Requires one of these roles: ${roles.join(', ')}` });
+      return res.status(403).json({ error: `Forbidden: Requires one of these roles: ${roles.join(', ')}` });
     }
 
     next();
