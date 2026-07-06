@@ -25,6 +25,7 @@ export const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [role, setRole] = useState<'IO' | 'SHO' | 'LEGAL_ADVISOR' | 'ADMIN'>('IO');
   const [policeStation, setPoliceStation] = useState('Chanakyapuri Police Station');
   const [roleCredential, setRoleCredential] = useState('');
@@ -33,6 +34,11 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [mfaStep, setMfaStep] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [devOtp, setDevOtp] = useState('');
+  const [resending, setResending] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -100,12 +106,66 @@ export const Login: React.FC = () => {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      login(data.token, data.user);
-      navigate('/');
+      // Credentials are valid — a one-time code has been issued. Move to the MFA step
+      // rather than logging in directly.
+      setMaskedEmail(data.maskedEmail || '');
+      setDevOtp(data.devOtp || '');
+      setOtpCode('');
+      setMfaStep(true);
     } catch (err: any) {
       setError(err.message || 'Server connection issue');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, otp: otpCode })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Verification failed');
+      }
+
+      login(data.token, data.user);
+      // A full page reload (rather than client-side navigation) clears every trace of the
+      // login/OTP form from memory — no lingering password, OTP, or autofill state — and
+      // ensures the browser can't reveal this screen again via the back button.
+      window.location.href = '/';
+    } catch (err: any) {
+      setError(err.message || 'Server connection issue');
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    setResending(true);
+    try {
+      const response = await fetch('/api/auth/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not resend code');
+      }
+      setDevOtp(data.devOtp || '');
+      setSuccess('A new code has been sent.');
+    } catch (err: any) {
+      setError(err.message || 'Server connection issue');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -133,6 +193,7 @@ export const Login: React.FC = () => {
           username,
           password,
           name,
+          email,
           role,
           police_station: policeStation,
           role_credential: roleCredential
@@ -146,8 +207,11 @@ export const Login: React.FC = () => {
 
       setSuccess('Account created successfully! Log in below with your security credential.');
       setIsSignUp(false);
-      // Reset forms
+      // Reset every field so no residual data lingers in memory or on screen
+      setUsername('');
       setPassword('');
+      setName('');
+      setEmail('');
       setRoleCredential('');
       setAgreed(false);
     } catch (err: any) {
@@ -255,6 +319,83 @@ export const Login: React.FC = () => {
           </div>
         </div>
 
+        {mfaStep ? (
+          <>
+            {/* MFA Verification Step */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-3">
+                <Lock className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h2 className="text-sm font-extrabold text-white uppercase tracking-wider">Two-Factor Verification</h2>
+              <p className="text-[11px] text-slate-400 mt-1.5 max-w-xs">
+                {maskedEmail
+                  ? `Enter the 6-digit code sent to ${maskedEmail}.`
+                  : 'Enter the 6-digit verification code.'}
+              </p>
+            </div>
+
+            {devOtp && (
+              <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] px-4 py-2.5 rounded-lg mb-4 font-semibold text-center">
+                Dev mode (no email service configured) — your code is <span className="font-black tracking-widest">{devOtp}</span>
+              </div>
+            )}
+
+            {error && (
+              <div className="bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs px-4 py-2.5 rounded-lg mb-4 font-semibold">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-emerald-500/10 border border-police-success/30 text-police-success text-xs px-4 py-2.5 rounded-lg mb-4 font-semibold">
+                {success}
+              </div>
+            )}
+
+            <form onSubmit={handleOtpSubmit} className="space-y-5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Verification Code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoFocus
+                  placeholder="••••••"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  maxLength={6}
+                  className="input-field w-full py-3 bg-[#050b14] border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 text-white rounded-lg px-4 text-2xl tracking-[0.5em] text-center font-mono outline-none transition-all duration-200"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || otpCode.length !== 6}
+                className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 text-white font-bold text-sm rounded-lg shadow-[0_4px_20px_rgba(99,102,241,0.25)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.4)] transition-all duration-200 uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed text-center block active:scale-95"
+              >
+                {loading ? 'Verifying...' : 'Verify & Sign In'}
+              </button>
+
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                <button
+                  type="button"
+                  onClick={() => { setMfaStep(false); setOtpCode(''); setError(''); setSuccess(''); setDevOtp(''); }}
+                  className="text-slate-500 hover:text-white transition-colors"
+                >
+                  ← Back to login
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resending}
+                  className="text-indigo-400 hover:text-indigo-300 transition-colors disabled:opacity-40"
+                >
+                  {resending ? 'Sending...' : 'Resend code'}
+                </button>
+              </div>
+            </form>
+          </>
+        ) : (
+          <>
         {/* Form Tabs */}
         <div className="flex p-1 bg-police-dark/60 border border-slate-800/80 rounded-xl mb-6">
           <button
@@ -306,6 +447,22 @@ export const Login: React.FC = () => {
                 className="input-field w-full py-3 bg-[#050b14] border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 text-white rounded-lg px-4 text-sm outline-none transition-all duration-200"
                 required
               />
+            </div>
+          )}
+
+          {isSignUp && (
+            /* Officer Email (used for MFA codes at login) */
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email Address</label>
+              <input
+                type="email"
+                placeholder="you@policedept.gov.in"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-field w-full py-3 bg-[#050b14] border border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 text-white rounded-lg px-4 text-sm outline-none transition-all duration-200"
+                required
+              />
+              <p className="text-[9px] text-slate-500">A verification code will be sent here every time you log in.</p>
             </div>
           )}
 
@@ -500,6 +657,8 @@ export const Login: React.FC = () => {
             </div>
           </div>
         </form>
+          </>
+        )}
 
       </div>
     </div>

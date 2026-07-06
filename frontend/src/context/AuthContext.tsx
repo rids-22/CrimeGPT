@@ -39,6 +39,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     localStorage.removeItem('crimegpt_token');
     localStorage.removeItem('crimegpt_user');
+    // Full reload (not client-side navigation) wipes all in-memory app state and
+    // prevents the browser's back button from revealing a previously authenticated
+    // screen from cache after logout.
+    window.location.href = '/login';
   };
 
   const authHeader = () => {

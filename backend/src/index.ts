@@ -1,3 +1,7 @@
+// Must be the very first import: loads .env into process.env before any other module
+// (like email.service.ts or ai.service.ts) gets a chance to read process.env at import time.
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';

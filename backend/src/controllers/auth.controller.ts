@@ -4,8 +4,38 @@ import jwt from 'jsonwebtoken';
 import { query, queryOne } from '../config/db';
 import { AuthRequest } from '../middleware/auth';
 import { logAction } from '../services/audit.service';
+import { sendOtpEmail, isEmailConfigured } from '../services/email.service';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'crimegpt_secret_key_2026';
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const OTP_MAX_ATTEMPTS = 5;
+
+// In-memory OTP store, keyed by username. This is intentionally not persisted to the
+// database: OTPs are short-lived, single-use, and only ever needed by this running
+// server process during the ~5 minute login window.
+interface PendingOtp {
+  otp: string;
+  expiresAt: number;
+  attempts: number;
+  userId: number;
+}
+const otpStore = new Map<string, PendingOtp>();
+
+function generateOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function issueSessionToken(user: any) {
+  const payload = {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    police_station: user.police_station
+  };
+  const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
+  return { token, payload };
+}
 
 // Enforces a minimum password strength on registration: at least 8 characters,
 // one uppercase, one lowercase, one digit, and one special character.
@@ -75,34 +105,135 @@ export async function login(req: Request, res: Response) {
       return res.status(401).json({ error: 'Secret role credential code does not match database record' });
     }
 
-    const payload = {
-      id: user.id,
+    // Credentials are valid — now require a second factor before issuing a session token.
+    const otp = generateOtp();
+    otpStore.set(username, {
+      otp,
+      expiresAt: Date.now() + OTP_TTL_MS,
+      attempts: 0,
+      userId: user.id
+    });
+
+    let emailSent = false;
+    if (user.email) {
+      emailSent = await sendOtpEmail(user.email, otp, user.name);
+    }
+
+    await logAction(user.id, user.username, 'Login credentials verified, OTP issued', { role: user.role });
+
+    const response: any = {
+      mfaRequired: true,
       username: user.username,
-      name: user.name,
-      role: user.role,
-      police_station: user.police_station
+      maskedEmail: user.email ? user.email.replace(/^(.{2}).+(@.+)$/, '$1***$2') : null,
+      emailSent
     };
 
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
+    // If SMTP isn't configured (e.g. local dev, or a hackathon demo without an email
+    // service set up), surface the OTP directly so the app stays fully testable.
+    // This never happens in production, and never happens if a real email was sent.
+    if (!emailSent && process.env.NODE_ENV !== 'production') {
+      response.devOtp = otp;
+    }
 
-    await logAction(user.id, user.username, 'User logged in', { role: user.role });
-
-    return res.status(200).json({
-      token,
-      user: payload
-    });
+    return res.status(200).json(response);
   } catch (err: any) {
     console.error('Login error:', err);
     return res.status(500).json({ error: 'Internal server error during login' });
   }
 }
 
+export async function verifyOtp(req: Request, res: Response) {
+  try {
+    const { username, otp } = req.body;
+
+    if (!username || !otp) {
+      return res.status(400).json({ error: 'Username and OTP code are required' });
+    }
+
+    const pending = otpStore.get(username);
+    if (!pending) {
+      return res.status(400).json({ error: 'No pending verification for this account. Please log in again.' });
+    }
+
+    if (Date.now() > pending.expiresAt) {
+      otpStore.delete(username);
+      return res.status(400).json({ error: 'This code has expired. Please log in again to receive a new one.' });
+    }
+
+    if (pending.attempts >= OTP_MAX_ATTEMPTS) {
+      otpStore.delete(username);
+      return res.status(429).json({ error: 'Too many incorrect attempts. Please log in again to receive a new code.' });
+    }
+
+    if (pending.otp !== otp.toString().trim()) {
+      pending.attempts += 1;
+      return res.status(401).json({ error: `Incorrect code. ${OTP_MAX_ATTEMPTS - pending.attempts} attempt(s) remaining.` });
+    }
+
+    // OTP correct — clean up and issue the real session token.
+    otpStore.delete(username);
+    const user = await queryOne('SELECT * FROM users WHERE id = $1', [pending.userId]);
+    if (!user) {
+      return res.status(401).json({ error: 'Account no longer exists' });
+    }
+
+    const { token, payload } = issueSessionToken(user);
+    await logAction(user.id, user.username, 'User logged in (MFA verified)', { role: user.role });
+
+    return res.status(200).json({ token, user: payload });
+  } catch (err: any) {
+    console.error('OTP verification error:', err);
+    return res.status(500).json({ error: 'Internal server error during OTP verification' });
+  }
+}
+
+export async function resendOtp(req: Request, res: Response) {
+  try {
+    const { username } = req.body;
+    if (!username) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
+    const pending = otpStore.get(username);
+    if (!pending) {
+      return res.status(400).json({ error: 'No pending verification for this account. Please log in again.' });
+    }
+
+    const user = await queryOne('SELECT * FROM users WHERE id = $1', [pending.userId]);
+    if (!user) {
+      return res.status(401).json({ error: 'Account no longer exists' });
+    }
+
+    const otp = generateOtp();
+    otpStore.set(username, { otp, expiresAt: Date.now() + OTP_TTL_MS, attempts: 0, userId: user.id });
+
+    let emailSent = false;
+    if (user.email) {
+      emailSent = await sendOtpEmail(user.email, otp, user.name);
+    }
+
+    const response: any = { resent: true, emailSent };
+    if (!emailSent && process.env.NODE_ENV !== 'production') {
+      response.devOtp = otp;
+    }
+
+    return res.status(200).json(response);
+  } catch (err: any) {
+    console.error('Resend OTP error:', err);
+    return res.status(500).json({ error: 'Internal server error while resending code' });
+  }
+}
+
 export async function register(req: Request, res: Response) {
   try {
-    const { username, password, name, role, police_station, role_credential } = req.body;
+    const { username, password, name, email, role, police_station, role_credential } = req.body;
 
-    if (!username || !password || !name || !role) {
+    if (!username || !password || !name || !role || !email) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Enter a valid email address — MFA codes are sent here at login.' });
     }
 
     if (!isStrongPassword(password)) {
@@ -126,8 +257,8 @@ export async function register(req: Request, res: Response) {
     const password_hash = bcrypt.hashSync(password, salt);
 
     const result = await query(
-      'INSERT INTO users (username, password_hash, name, role, police_station, role_credential) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-      [username, password_hash, name, role, police_station || '', role_credential]
+      'INSERT INTO users (username, password_hash, name, email, role, police_station, role_credential) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      [username, password_hash, name, email, role, police_station || '', role_credential]
     );
 
     const newUserId = result.rows[0]?.id || 1;

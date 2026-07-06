@@ -106,6 +106,7 @@ async function runMigrationsPG() {
       username VARCHAR(50) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
       name VARCHAR(100) NOT NULL,
+      email VARCHAR(150),
       role VARCHAR(20) NOT NULL,
       police_station VARCHAR(100),
       role_credential VARCHAR(100),
@@ -166,6 +167,7 @@ async function runMigrationsPG() {
     await pgPool.query(createTablesSQL);
     // Add role_credential if table exists from before
     await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS role_credential VARCHAR(100);');
+    await pgPool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(150);');
     console.log('✅ PostgreSQL tables verified/created.');
     await seedDefaultUsers();
   } catch (err: any) {
@@ -185,6 +187,7 @@ function runMigrationsSQLite() {
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         name TEXT NOT NULL,
+        email TEXT,
         role TEXT NOT NULL,
         police_station TEXT,
         role_credential TEXT,
@@ -194,6 +197,9 @@ function runMigrationsSQLite() {
 
     // Try to run ALTER in case table existed before without column
     sqliteDb!.run(`ALTER TABLE users ADD COLUMN role_credential TEXT;`, (err) => {
+      // Ignore "duplicate column name" error silently
+    });
+    sqliteDb!.run(`ALTER TABLE users ADD COLUMN email TEXT;`, (err) => {
       // Ignore "duplicate column name" error silently
     });
 
@@ -272,10 +278,10 @@ async function seedDefaultUsers() {
   const hash = bcrypt.hashSync('password123', salt);
 
   const defaultUsers = [
-    { username: 'io_sharma', password_hash: hash, name: 'Inspector R. K. Sharma', role: 'IO', police_station: 'Chanakyapuri Police Station, New Delhi', role_credential: 'IO-10293' },
-    { username: 'sho_singh', password_hash: hash, name: 'SHO Harbhajan Singh', role: 'SHO', police_station: 'Chanakyapuri Police Station, New Delhi', role_credential: 'PS-4001' },
-    { username: 'legal_verma', password_hash: hash, name: 'Adv. Meera Verma', role: 'LEGAL_ADVISOR', police_station: 'District Court Prosecution Cell', role_credential: 'BC-1234/56' },
-    { username: 'admin_crimegpt', password_hash: hash, name: 'System Admin', role: 'ADMIN', police_station: 'Police HQ IT Cell', role_credential: 'ADM-99182' }
+    { username: 'io_sharma', password_hash: hash, name: 'Inspector R. K. Sharma', email: 'io.sharma@crimegpt.demo', role: 'IO', police_station: 'Chanakyapuri Police Station, New Delhi', role_credential: 'IO-10293' },
+    { username: 'sho_singh', password_hash: hash, name: 'SHO Harbhajan Singh', email: 'sho.singh@crimegpt.demo', role: 'SHO', police_station: 'Chanakyapuri Police Station, New Delhi', role_credential: 'PS-4001' },
+    { username: 'legal_verma', password_hash: hash, name: 'Adv. Meera Verma', email: 'legal.verma@crimegpt.demo', role: 'LEGAL_ADVISOR', police_station: 'District Court Prosecution Cell', role_credential: 'BC-1234/56' },
+    { username: 'admin_crimegpt', password_hash: hash, name: 'System Admin', email: 'admin@crimegpt.demo', role: 'ADMIN', police_station: 'Police HQ IT Cell', role_credential: 'ADM-99182' }
   ];
 
   for (const user of defaultUsers) {
@@ -283,15 +289,19 @@ async function seedDefaultUsers() {
       const existing = await queryOne('SELECT id FROM users WHERE username = $1', [user.username]);
       if (!existing) {
         await query(
-          'INSERT INTO users (username, password_hash, name, role, police_station, role_credential) VALUES ($1, $2, $3, $4, $5, $6)',
-          [user.username, user.password_hash, user.name, user.role, user.police_station, user.role_credential]
+          'INSERT INTO users (username, password_hash, name, email, role, police_station, role_credential) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+          [user.username, user.password_hash, user.name, user.email, user.role, user.police_station, user.role_credential]
         );
         console.log(`Seeded user: ${user.username} (${user.role})`);
       } else {
-        // Update credentials if they are empty
+        // Update credentials/email if they are empty (covers DBs seeded before this migration)
         await query(
           'UPDATE users SET role_credential = $1 WHERE username = $2 AND (role_credential IS NULL OR role_credential = \'\')',
           [user.role_credential, user.username]
+        );
+        await query(
+          'UPDATE users SET email = $1 WHERE username = $2 AND (email IS NULL OR email = \'\')',
+          [user.email, user.username]
         );
       }
     } catch (err: any) {
